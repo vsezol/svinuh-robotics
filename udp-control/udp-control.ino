@@ -1,21 +1,24 @@
-// Experiment: no web server at all. The robot joins an existing WiFi
-// network (station mode, same network as your computer) and just listens
-// for tiny UDP packets - no HTTP, no static page, nothing to serve.
+// Experiment: control over raw UDP instead of a web server. The robot
+// joins an existing WiFi network (station mode, same network as your
+// computer) and listens for tiny UDP packets. The control page itself
+// lives on your computer (see server/) - this firmware only serves the
+// camera feed (a small MJPEG endpoint), nothing else.
 //
-// Wire protocol (same letters as web-cam-manual, minus the WebSocket):
+// Wire protocol:
 //   F/B/L/R/S   move forward/backward/left/right, or stop
 //   V<0-255>    set drive speed
 //   D<0-255>    set LED brightness
-//   PING        -> robot replies PONG (lets client/control.py find it)
+//   PING        -> robot replies PONG (lets server/app.py find it)
 //
-// Fill in your WiFi credentials below, then flash with the same
-// AI-Thinker ESP32-CAM board profile as web-cam-manual.
+// Copy secrets.h.example to secrets.h and fill in your WiFi network before
+// flashing (secrets.h is gitignored, never committed).
 
 #include <WiFi.h>
 #include <WiFiUdp.h>
+#include "secrets.h"
 
-const char *ssid = "YOUR_WIFI_SSID";
-const char *password = "YOUR_WIFI_PASSWORD";
+void initCameraStream();
+
 const uint16_t UDP_PORT = 4210;
 const unsigned long COMMAND_TIMEOUT_MS = 400; // auto-stop if packets stop arriving
 
@@ -69,7 +72,7 @@ void setup() {
   ledcAttach(gpLed, 5000, 8);
 
   WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to WiFi");
   while (WiFi.status() != WL_CONNECTED) {
     delay(300);
@@ -81,6 +84,8 @@ void setup() {
 
   udp.begin(UDP_PORT);
   Serial.printf("Listening for UDP on port %u\n", UDP_PORT);
+
+  initCameraStream();
 }
 
 void loop() {

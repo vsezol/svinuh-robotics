@@ -5,3 +5,5 @@ build/
 *.map
 generated/
 __pycache__/
+secrets.h
+.env
