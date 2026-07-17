@@ -39,7 +39,7 @@ def require_arduino_cli():
 def ensure_core_installed():
     out = subprocess.run(["arduino-cli", "core", "list", "--format", "json"],
                           capture_output=True, text=True, check=True)
-    cores = {c["id"] for c in json.loads(out.stdout or "[]")}
+    cores = {c["id"] for c in json.loads(out.stdout or "{}").get("platforms", [])}
     if "esp32:esp32" in cores:
         return
     if input("esp32 core not installed. Install it now (~250MB download)? [y/N] ").strip().lower() != "y":
