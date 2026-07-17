@@ -3,6 +3,10 @@
 ESP32-CAM (AI-Thinker) + L298N robot: camera stream and manual drive control
 over the robot's own WiFi access point (`192.168.4.1`).
 
+## Architecture
+
+![Runtime architecture: phone/laptop browser talks to the ESP32-CAM over WiFi AP 192.168.4.1 — HTTP GET / and /app.js load the page once, a persistent WebSocket at /ws carries movement/speed/LED commands, and HTTP GET :81/stream plus /capture serve the camera feed. Inside the ESP32, ws_handler dispatches to handle_ws_cmd(), which calls WheelAct() to drive the L298N motor driver and ledcWrite() for the onboard LED; capture_handler and stream_handler both pull frames from the OV2640 camera via esp_camera_fb_get().](docs/architecture.svg)
+
 ## Layout
 
 - `web-cam-manual.ino`, `CameraWebServer.cpp`, `app_httpd.cpp` — firmware.
