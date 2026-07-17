@@ -4,7 +4,7 @@
 // through this server: the <img> below loads it directly from the robot.
 
 let robotIp = null;
-fetch('/config').then(r => r.json()).then(cfg => { robotIp = cfg.robotIp; });
+const configReady = fetch('/config').then(r => r.json()).then(cfg => { robotIp = cfg.robotIp; });
 
 function send(cmd) {
   fetch(`/cmd?c=${cmd}`).catch(() => {});
@@ -69,9 +69,14 @@ const toggleBtn = document.getElementById('toggle-stream');
 const closeBtn = document.getElementById('close-stream');
 
 function startStream() {
-  if (!robotIp) return;
-  stream.src = `http://${robotIp}:81/stream`;
-  toggleBtn.textContent = 'Stop screen';
+  configReady.then(() => {
+    if (!robotIp) {
+      alert("Don't know the robot's IP - check the terminal running server/app.py.");
+      return;
+    }
+    stream.src = `http://${robotIp}:81/stream`;
+    toggleBtn.textContent = 'Stop screen';
+  });
 }
 function stopStream() {
   window.stop();
