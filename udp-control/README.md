@@ -36,9 +36,10 @@ Trade-off vs `web-cam-manual`:
    `secrets.h` is gitignored - it never gets committed.
 2. Flash it (same physical board as web-cam-manual - AI-Thinker ESP32-CAM):
    ```
-   arduino-cli compile --fqbn esp32:esp32:esp32cam .
-   arduino-cli upload --fqbn esp32:esp32:esp32cam -p <port> .
+   python3 scripts/flash.py
    ```
+   Compiles, lets you pick a serial port (if more than one is connected)
+   and an upload speed, then flashes.
 3. Open Serial Monitor (115200 baud) to confirm it joined WiFi - optional,
    the server below can also find it on its own.
 4. On your computer, on the same WiFi:
