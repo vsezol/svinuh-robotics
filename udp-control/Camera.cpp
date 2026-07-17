@@ -116,7 +116,7 @@ void initCameraStream() {
   sensor_t *s = esp_camera_sensor_get();
   s->set_framesize(s, FRAMESIZE_QVGA);
   s->set_vflip(s, 1);
-  s->set_hmirror(s, 0); // mirrored view made left/right look swapped vs actual turns
+  s->set_hmirror(s, 1); // left/right correction happens client-side (CSS), not here
 
   httpd_config_t httpd_cfg = HTTPD_DEFAULT_CONFIG();
   httpd_cfg.server_port = 81;
