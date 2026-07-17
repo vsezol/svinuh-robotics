@@ -1,4 +1,4 @@
-# web-cam-manual
+# robot-car-own-server
 
 ESP32-CAM (AI-Thinker) + L298N robot: camera stream and manual drive control
 over the robot's own WiFi access point (`192.168.4.1`).
@@ -9,7 +9,7 @@ over the robot's own WiFi access point (`192.168.4.1`).
 
 ## Layout
 
-- `web-cam-manual.ino`, `CameraWebServer.cpp`, `app_httpd.cpp` — firmware.
+- `robot-car-own-server.ino`, `CameraWebServer.cpp`, `app_httpd.cpp` — firmware.
 - `web/index.html`, `web/app.js` — the control page, hand-written and readable.
 - `generated/web_assets.h` — **build output, not committed.** `web/` gets
   minified and gzipped at build time into a C header the firmware serves
@@ -45,5 +45,5 @@ server of RAM under load).
 python3 scripts/build_web.py
 ```
 
-Then open `web-cam-manual.ino` in Arduino IDE and upload as usual. If the
+Then open `robot-car-own-server.ino` in Arduino IDE and upload as usual. If the
 upload is flaky, try a lower Upload Speed (115200).

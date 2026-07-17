@@ -22,7 +22,7 @@ void initCameraStream();
 const uint16_t UDP_PORT = 4210;
 const unsigned long COMMAND_TIMEOUT_MS = 400; // auto-stop if packets stop arriving
 
-// Same pins as web-cam-manual's L298N wiring.
+// Same pins as robot-car-own-server's L298N wiring.
 int gpLb = 14, gpLf = 13, gpRb = 33, gpRf = 15, gpLed = 4, ENR = 2, ENL = 12;
 int speed = 220;
 
@@ -73,7 +73,9 @@ void setup() {
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("Connecting to WiFi");
+  // Serial.print("Connecting to WiFi " + " WIFI_SSID " + WIFI_SSID + " WIFI_PASSWORD " + WIFI_PASSWORD);
+  Serial.printf("Connecting to WiFi WIFI_SSID %s WIFI_PASSWORD %s \n", WIFI_SSID, WIFI_PASSWORD);
+
   while (WiFi.status() != WL_CONNECTED) {
     delay(300);
     Serial.print(".");

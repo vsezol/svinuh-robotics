@@ -3,10 +3,11 @@
 
 The browser only ever talks to this server (same machine, negligible
 latency, so plain HTTP per button press is fine here - the reason
-web-cam-manual avoids that is the ESP32 being resource-constrained, which
-doesn't apply to your computer). This server turns each request into one
-UDP packet sent to the robot. Video is NOT proxied through here - the page
-loads it directly from the robot's own MJPEG endpoint (see udp-control.ino).
+robot-car-own-server avoids that is the ESP32 being resource-constrained,
+which doesn't apply to your computer). This server turns each request into
+one UDP packet sent to the robot. Video is NOT proxied through here - the
+page loads it directly from the robot's own MJPEG endpoint (see
+robot-car-shared-wifi.ino).
 
 Usage: python3 server/app.py
 Reads ROBOT_IP (and optionally PORT) from the environment or a local .env

@@ -1,6 +1,6 @@
 // This page and the server serving it both run on YOUR computer
 // (server/app.py), which forwards each command as one UDP packet to the
-// robot - see udp-control.ino for the wire protocol. Video is NOT proxied
+// robot - see robot-car-shared-wifi.ino for the wire protocol. Video is NOT proxied
 // through this server: the <img> below loads it directly from the robot.
 
 let robotIp = null;

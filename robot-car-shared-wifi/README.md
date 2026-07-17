@@ -1,7 +1,7 @@
-# udp-control (experiment)
+# robot-car-shared-wifi (experiment)
 
-Alternative to `web-cam-manual`'s approach: the robot doesn't serve the
-control page or run any web server for it. It joins your existing WiFi
+Alternative to `robot-car-own-server`'s approach: the robot doesn't serve
+the control page or run any web server for it. It joins your existing WiFi
 (station mode, same network as your computer) and just listens for tiny
 UDP packets. The control page is served by **your computer**
 (`server/app.py`), which bridges browser button presses to UDP packets.
@@ -9,22 +9,22 @@ UDP packets. The control page is served by **your computer**
 Video still needs *some* server, since streaming JPEG frames over raw UDP
 (fragmenting datagrams, handling loss/reordering) is real work for no
 benefit here - so the robot runs one small MJPEG endpoint (`/stream`,
-port 81, lifted from `web-cam-manual`) and the browser loads it **directly
-from the robot**, bypassing the computer entirely. The computer only ever
-proxies the lightweight control commands.
+port 81, lifted from `robot-car-own-server`) and the browser loads it
+**directly from the robot**, bypassing the computer entirely. The computer
+only ever proxies the lightweight control commands.
 
 ```
 Browser  --HTTP (localhost)-->  server/app.py  --UDP-->  robot (F/B/L/R/S, V<n>, D<n>)
 Browser  --HTTP, direct-------------------------------->  robot:81/stream (MJPEG video)
 ```
 
-Trade-off vs `web-cam-manual`:
+Trade-off vs `robot-car-own-server`:
 
 - **Lighter robot firmware** - no HTTP control server, no gzip/minify
   build step, no static assets to serve. Just `WiFi.begin()` + `WiFiUDP`
   for control; the camera stream is the only HTTP surface left.
 - **No standalone hotspot** - the robot needs a WiFi network with a router
-  already running (unlike `web-cam-manual`'s own access point).
+  already running (unlike `robot-car-own-server`'s own access point).
 - **UDP has no delivery guarantee or connection state** - fine here, since
   a dropped "forward" packet just means one skipped tick, and the newest
   command always wins. The firmware auto-stops if packets stop arriving
@@ -34,8 +34,8 @@ Trade-off vs `web-cam-manual`:
 
 1. `cp secrets.h.example secrets.h` and fill in your WiFi network.
    `secrets.h` is gitignored - it never gets committed.
-2. Open `udp-control.ino` in Arduino IDE (same physical board as
-   web-cam-manual - AI-Thinker ESP32-CAM) and upload as usual. If the
+2. Open `robot-car-shared-wifi.ino` in Arduino IDE (same physical board as
+   robot-car-own-server - AI-Thinker ESP32-CAM) and upload as usual. If the
    upload is flaky, try a lower Upload Speed (115200).
 3. Open Serial Monitor (115200 baud) to confirm it joined WiFi - optional,
    the server below can also find it on its own.

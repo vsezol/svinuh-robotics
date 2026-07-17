@@ -11,7 +11,7 @@
 
   <rect x="0" y="0" width="1300" height="650" fill="#ffffff"/>
 
-  <text x="40" y="34" font-size="22" font-weight="700" fill="#1e1e1e">svinuh-robotics / web-cam-manual — runtime architecture</text>
+  <text x="40" y="34" font-size="22" font-weight="700" fill="#1e1e1e">svinuh-robotics / robot-car-own-server — runtime architecture</text>
 
   <!-- Browser -->
   <g transform="rotate(-0.6 170 360)">
@@ -52,7 +52,7 @@
     <rect x="420" y="460" width="460" height="110" rx="14" fill="#e9ecef" stroke="#1e1e1e" stroke-width="2" stroke-dasharray="6 5" filter="url(#rough)"/>
   </g>
   <text x="440" y="486" font-size="14.5" font-weight="700" fill="#1e1e1e">startup (runs once at boot)</text>
-  <text x="440" y="512" font-size="13" fill="#1e1e1e">web-cam-manual.ino: setup() -&gt; initMotors()</text>
+  <text x="440" y="512" font-size="13" fill="#1e1e1e">robot-car-own-server.ino: setup() -&gt; initMotors()</text>
   <text x="440" y="534" font-size="13" fill="#1e1e1e">CameraWebServer.cpp: CameraWebServer_init()</text>
   <text x="440" y="554" font-size="13" fill="#1e1e1e">-&gt; WiFi AP 192.168.4.1 + esp_camera_init()</text>
 

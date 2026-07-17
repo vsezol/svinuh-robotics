@@ -1,6 +1,6 @@
 // Video is the one thing that's genuinely painful to do over raw UDP
 // (fragmenting JPEGs across datagrams, reordering, loss handling) - so
-// this stays plain MJPEG-over-HTTP like web-cam-manual, just trimmed to
+// this stays plain MJPEG-over-HTTP like robot-car-own-server, just trimmed to
 // only the /stream route. Nothing else is served from the robot; the
 // browser loads this directly (same LAN), bypassing the control server
 // on your computer entirely.
