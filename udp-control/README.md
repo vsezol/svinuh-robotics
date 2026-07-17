@@ -34,14 +34,9 @@ Trade-off vs `web-cam-manual`:
 
 1. `cp secrets.h.example secrets.h` and fill in your WiFi network.
    `secrets.h` is gitignored - it never gets committed.
-2. Flash it (same physical board as web-cam-manual - AI-Thinker ESP32-CAM),
-   from the repo root:
-   ```
-   ./svinuh flash udp-control
-   ```
-   Compiles, lets you pick a serial port (if more than one is connected)
-   and an upload speed, then flashes. See [`../svinuh-cli`](../svinuh-cli)
-   for how this is shared across projects.
+2. Open `udp-control.ino` in Arduino IDE (same physical board as
+   web-cam-manual - AI-Thinker ESP32-CAM) and upload as usual. If the
+   upload is flaky, try a lower Upload Speed (115200).
 3. Open Serial Monitor (115200 baud) to confirm it joined WiFi - optional,
    the server below can also find it on its own.
 4. On your computer, on the same WiFi:
