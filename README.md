@@ -1,4 +1,4 @@
-# svinuh-robotics
+# pigs-robotics
 
 ESP32-CAM + L298N robot projects.
 
