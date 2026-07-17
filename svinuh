@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+"""svinuh - manage/flash the robot projects in this repo.
+
+Usage:
+  ./svinuh list
+  ./svinuh flash [project]
+"""
+import subprocess
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent / "svinuh-cli"))
+from cli import main  # noqa: E402
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except subprocess.CalledProcessError as e:
+        sys.exit(f"{e.args[0]!r} failed with exit code {e.returncode}")
+    except KeyboardInterrupt:
+        sys.exit(1)

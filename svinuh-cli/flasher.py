@@ -1,23 +1,15 @@
-#!/usr/bin/env python3
-"""Build the web UI, compile the sketch, and flash it onto the ESP32-CAM.
+"""Shared arduino-cli plumbing: core checks, port/speed selection, compile+upload.
 
-Usage: python3 scripts/flash.py
-Requires arduino-cli on PATH (https://arduino.github.io/arduino-cli/) with
-the esp32 core installed - the script will offer to install it if missing.
+Used by cli.py - not project-specific, this is the "one flashing pipeline"
+every project in this repo shares.
 """
 import json
 import shutil
 import subprocess
 import sys
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import build_web  # noqa: E402
-
-PROJECT_DIR = Path(__file__).resolve().parent.parent
-FQBN = "esp32:esp32:esp32cam"  # AI-Thinker ESP32-CAM - keeps PSRAM always on
 UPLOAD_SPEEDS = [115200, 230400, 460800, 921600]
-DEFAULT_SPEED = 115200  # this board's cheap USB-UART adapter is unreliable above this
+DEFAULT_SPEED = 115200  # these boards' cheap USB-UART adapters are unreliable above this
 IGNORED_PORT_HINTS = ("bluetooth", "debug-console")
 
 
@@ -36,15 +28,15 @@ def require_arduino_cli():
         )
 
 
-def ensure_core_installed():
+def ensure_core_installed(core="esp32:esp32"):
     out = subprocess.run(["arduino-cli", "core", "list", "--format", "json"],
                           capture_output=True, text=True, check=True)
     cores = {c["id"] for c in json.loads(out.stdout or "{}").get("platforms", [])}
-    if "esp32:esp32" in cores:
+    if core in cores:
         return
-    if input("esp32 core not installed. Install it now (~250MB download)? [y/N] ").strip().lower() != "y":
-        sys.exit("Aborted: esp32 core is required.")
-    run(["arduino-cli", "core", "install", "esp32:esp32"], check=True)
+    if input(f"{core} core not installed. Install it now (~250MB download)? [y/N] ").strip().lower() != "y":
+        sys.exit(f"Aborted: {core} core is required.")
+    run(["arduino-cli", "core", "install", core], check=True)
 
 
 def list_ports():
@@ -91,15 +83,24 @@ def choose_speed():
     )
 
 
-def main():
+def flash(project_dir, fqbn, prebuild=None, secrets_file=None):
     require_arduino_cli()
     ensure_core_installed()
 
-    print("== building web assets ==")
-    build_web.main()
+    if secrets_file and not (project_dir / secrets_file).is_file():
+        sys.exit(
+            f"{project_dir.name}/{secrets_file} not found (gitignored, so a fresh "
+            "clone won't have it).\n"
+            f"  cp {project_dir.name}/{secrets_file}.example {project_dir.name}/{secrets_file}\n"
+            "then fill it in and run this again."
+        )
+
+    if prebuild:
+        print("== running prebuild step ==")
+        run(prebuild, check=True)
 
     print("== compiling ==")
-    run(["arduino-cli", "compile", "--fqbn", FQBN, PROJECT_DIR], check=True)
+    run(["arduino-cli", "compile", "--fqbn", fqbn, project_dir], check=True)
 
     port = choose_port()
     speed = choose_speed()
@@ -107,19 +108,10 @@ def main():
     print(f"== uploading @ {speed} baud ==")
     run([
         "arduino-cli", "upload",
-        "--fqbn", FQBN,
+        "--fqbn", fqbn,
         "-p", port,
         "--upload-property", f"upload.speed={speed}",
-        PROJECT_DIR,
+        project_dir,
     ], check=True)
 
     print("Done.")
-
-
-if __name__ == "__main__":
-    try:
-        main()
-    except subprocess.CalledProcessError as e:
-        sys.exit(f"{e.args[0]!r} failed with exit code {e.returncode}")
-    except KeyboardInterrupt:
-        sys.exit(1)

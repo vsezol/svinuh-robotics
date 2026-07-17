@@ -34,12 +34,14 @@ Trade-off vs `web-cam-manual`:
 
 1. `cp secrets.h.example secrets.h` and fill in your WiFi network.
    `secrets.h` is gitignored - it never gets committed.
-2. Flash it (same physical board as web-cam-manual - AI-Thinker ESP32-CAM):
+2. Flash it (same physical board as web-cam-manual - AI-Thinker ESP32-CAM),
+   from the repo root:
    ```
-   python3 scripts/flash.py
+   ./svinuh flash udp-control
    ```
    Compiles, lets you pick a serial port (if more than one is connected)
-   and an upload speed, then flashes.
+   and an upload speed, then flashes. See [`../svinuh-cli`](../svinuh-cli)
+   for how this is shared across projects.
 3. Open Serial Monitor (115200 baud) to confirm it joined WiFi - optional,
    the server below can also find it on its own.
 4. On your computer, on the same WiFi:

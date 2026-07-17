@@ -15,7 +15,8 @@ over the robot's own WiFi access point (`192.168.4.1`).
   minified and gzipped at build time into a C header the firmware serves
   directly from flash; regenerate with `scripts/build_web.py`.
 - `scripts/build_web.py` — regenerates `generated/web_assets.h` from `web/`.
-- `scripts/flash.py` — builds, compiles, and uploads in one step.
+  Flashing (build → compile → upload) is now handled from the repo root —
+  see [`../svinuh-cli`](../svinuh-cli).
 
 ## Control protocol
 
@@ -40,8 +41,10 @@ Requires [arduino-cli](https://arduino.github.io/arduino-cli/) with the
 Module" — that profile leaves PSRAM off by default, which starves the HTTP
 server of RAM under load).
 
+From the repo root:
+
 ```
-python3 scripts/flash.py
+./svinuh flash web-cam-manual
 ```
 
 Builds the web assets, compiles, lets you pick a serial port (if more than
