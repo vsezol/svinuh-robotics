@@ -1,33 +1,36 @@
-"""Registry of flashable projects in this repo. Add a new one here and both
-`./svinuh list` and `./svinuh flash <name>` pick it up - nothing else to wire up.
-"""
+"""Loads the project registry from svinuh.yml at the repo root. Add an
+entry there for a new project - nothing to change in this file."""
 import sys
 from pathlib import Path
+
+try:
+    import yaml
+except ImportError:
+    sys.exit(
+        "PyYAML is required to read svinuh.yml. Install it with:\n"
+        "  pip3 install pyyaml"
+    )
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
-def _project(name, desc, secrets_file=None, prebuild_script=None):
-    project_dir = REPO_ROOT / name
-    prebuild = [sys.executable, str(project_dir / prebuild_script)] if prebuild_script else None
-    return {
-        "dir": project_dir,
-        "desc": desc,
-        "fqbn": "esp32:esp32:esp32cam",  # AI-Thinker ESP32-CAM - every project here runs on it
-        "prebuild": prebuild,
-        "secrets_file": secrets_file,
-    }
+def load_projects():
+    config = yaml.safe_load((REPO_ROOT / "svinuh.yml").read_text())
+    default_fqbn = config.get("fqbn")
+
+    projects = {}
+    for entry in config["projects"]:
+        name = entry["name"]
+        project_dir = REPO_ROOT / name
+        prebuild_script = entry.get("prebuild_script")
+        projects[name] = {
+            "dir": project_dir,
+            "desc": entry.get("desc", ""),
+            "fqbn": entry.get("fqbn", default_fqbn),
+            "prebuild": [sys.executable, str(project_dir / prebuild_script)] if prebuild_script else None,
+            "secrets_file": entry.get("secrets_file"),
+        }
+    return projects
 
 
-PROJECTS = {
-    "web-cam-manual": _project(
-        "web-cam-manual",
-        "ESP32 access point + web UI (WebSocket control, MJPEG camera)",
-        prebuild_script="scripts/build_web.py",
-    ),
-    "udp-control": _project(
-        "udp-control",
-        "ESP32 joins your WiFi, control page runs on your computer (UDP + MJPEG)",
-        secrets_file="secrets.h",
-    ),
-}
+PROJECTS = load_projects()

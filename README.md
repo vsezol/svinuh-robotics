@@ -2,6 +2,9 @@
 
 ESP32-CAM + L298N robot projects.
 
+Requires `pip3 install -r requirements.txt` once (just PyYAML, for
+`svinuh.yml` below).
+
 ```
 ./svinuh list          # show what's here
 ./svinuh flash <name>   # compile and upload a project
@@ -17,7 +20,10 @@ ESP32-CAM + L298N robot projects.
 
 ## svinuh-cli
 
-`svinuh-cli/` holds the shared flashing pipeline (arduino-cli checks,
-port/speed selection, compile+upload) so it isn't duplicated per project.
-Adding a new project means adding one entry to `svinuh-cli/projects.py` —
-see that file.
+[`svinuh.yml`](svinuh.yml) is the project registry - name, description,
+FQBN, any prebuild step, any gitignored secrets file it needs. Adding a
+new project means adding one entry there, nothing else to wire up.
+
+`svinuh-cli/` is the flashing pipeline that reads it: arduino-cli checks,
+port/speed selection, compile+upload. `./svinuh` itself just forwards into
+it - `svinuh-cli/cli.py` is where the actual command handling lives.
