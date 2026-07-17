@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>svinuh robot</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  body {
+    margin: 0; padding: 16px;
+    background: #14161a; color: #eaeaea;
+    font: 15px/1.4 system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+  }
+  h1 { font-size: 18px; font-weight: 600; margin: 0; color: #9aa0a6; letter-spacing: .02em; }
+  img#stream {
+    width: 100%; max-width: 480px; aspect-ratio: 4 / 3;
+    background: #000; border-radius: 8px; object-fit: cover;
+    display: block;
+  }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  button {
+    font: inherit; border: none; border-radius: 8px;
+    background: #e0393e; color: #fff; padding: 12px 18px;
+    min-width: 64px; touch-action: manipulation;
+  }
+  button:active { background: #2e9e4c; }
+  button.ghost { background: #2a2d33; color: #cfd2d6; }
+  button.ghost:active { background: #3a3e46; }
+  .dpad {
+    display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(2, 48px);
+    gap: 8px; justify-content: center;
+  }
+  .dpad button:nth-child(1) { grid-column: 2; }
+  .dpad button:nth-child(4) { grid-column: 2; }
+  .sliders { width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 10px; }
+  .sliders label { display: flex; align-items: center; gap: 10px; color: #9aa0a6; font-size: 13px; }
+  input[type=range] { flex: 1; accent-color: #e0393e; }
+</style>
+</head>
+<body>
+  <h1>svinuh robot</h1>
+
+  <img id="stream" alt="camera stream">
+  <div class="row">
+    <button type="button" class="ghost" id="toggle-stream">Start screen</button>
+    <button type="button" class="ghost" id="get-still">Snapshot</button>
+    <button type="button" class="ghost" id="close-stream">Close</button>
+  </div>
+
+  <div class="dpad">
+    <button type="button" id="forward">▲</button>
+    <button type="button" id="turnleft">◀</button>
+    <button type="button" id="turnright">▶</button>
+    <button type="button" id="backward">▼</button>
+  </div>
+
+  <div class="sliders">
+    <label>Speed <input type="range" id="speed" min="150" max="255" value="220"></label>
+    <label>LED <input type="range" id="flash" min="0" max="255" value="0"></label>
+  </div>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>

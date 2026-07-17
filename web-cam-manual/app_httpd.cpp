@@ -1,14 +1,15 @@
 #include <esp32-hal-ledc.h>
 #include "fb_gfx.h"
 
-int speed = 255;  
-int noStop = 0;
-
 #include "esp_http_server.h"
 #include "esp_timer.h"
 #include "esp_camera.h"
 #include "img_converters.h"
 #include "Arduino.h"
+
+#include "generated/web_assets.h"
+
+int speed = 255;
 
 extern int ENR;
 extern int ENL;
@@ -179,7 +180,7 @@ static esp_err_t stream_handler(httpd_req_t *req){
         frame_time /= 1000;
         Serial.printf("MJPG: %uB %ums (%.1ffps)\r\n",
             (uint32_t)(_jpg_buf_len),
-            (uint32_t)frame_time, 1000.0 / (uint32_t)frame_time           
+            (uint32_t)frame_time, 1000.0 / (uint32_t)frame_time
         );
     }
 
@@ -187,374 +188,76 @@ static esp_err_t stream_handler(httpd_req_t *req){
     return res;
 }
 
-enum state {fwd,rev,stp};
-state actstate = stp;
-
-static esp_err_t cmd_handler(httpd_req_t *req)
-{
-    char*  buf;
-    size_t buf_len;
-    char variable[32] = {0,};
-    char value[32] = {0,};
-
-    buf_len = httpd_req_get_url_query_len(req) + 1;
-    if (buf_len > 1) {
-        buf = (char*)malloc(buf_len);
-        if(!buf){
-            httpd_resp_send_500(req);
-            return ESP_FAIL;
-        }
-        if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
-            if (httpd_query_key_value(buf, "var", variable, sizeof(variable)) == ESP_OK &&
-                httpd_query_key_value(buf, "val", value, sizeof(value)) == ESP_OK) {
-            } else {
-                free(buf);
-                httpd_resp_send_404(req);
-                return ESP_FAIL;
-            }
-        } else {
-            free(buf);
-            httpd_resp_send_404(req);
-            return ESP_FAIL;
-        }
-        free(buf);
-    } else {
-        httpd_resp_send_404(req);
-        return ESP_FAIL;
+// ---- Control channel: one persistent WebSocket instead of one HTTP
+// request per button press. Wire protocol (see web/app.js):
+//   F/B/L/R/S   move forward/backward/left/right, or stop  (1 byte)
+//   V<0-255>    set drive speed, e.g. "V220"
+//   D<0-255>    set LED brightness, e.g. "D128"
+static void handle_ws_cmd(const char *buf){
+    switch (buf[0]) {
+        case 'F': WheelAct(speed, speed, HIGH, LOW, HIGH, LOW); break;
+        case 'B': WheelAct(speed, speed, LOW, HIGH, LOW, HIGH); break;
+        case 'L': WheelAct(speed, speed, HIGH, LOW, LOW, HIGH); break;
+        case 'R': WheelAct(speed, speed, LOW, HIGH, HIGH, LOW); break;
+        case 'S': WheelAct(0, 0, LOW, LOW, LOW, LOW); break;
+        case 'V': speed = constrain(atoi(buf + 1), 0, 255); break;
+        case 'D': ledcWrite(gpLed, constrain(atoi(buf + 1), 0, 255)); break;
     }
-
-    int val = atoi(value);
-    sensor_t * s = esp_camera_sensor_get();
-    int res = 0;
-    //Serial.println(variable);
-    if(!strcmp(variable, "framesize")) 
-    {
-        Serial.println("framesize");
-        if(s->pixformat == PIXFORMAT_JPEG) res = s->set_framesize(s, (framesize_t)val);
-    }
-    else if(!strcmp(variable, "quality")) 
-    {
-      Serial.println("quality");
-      res = s->set_quality(s, val);
-    }
-    //Remote Control Car 
-    //Don't use channel 1 and channel 2
-    else if(!strcmp(variable, "flash"))
-    {
-      ledcWrite(gpLed,val);
-    }
-    else if(!strcmp(variable, "speed")) 
-    {
-      if      (val > 255) val = 255;
-      else if (val <   0) val = 0;       
-      speed = val;
-    }     
-    else if(!strcmp(variable, "nostop")) 
-    {
-      noStop = val;
-      Serial.println(noStop);
-    }             
-    else if(!strcmp(variable, "servo")) // 3250, 4875, 6500
-    {
-      if      (val > 650) val = 650; //650
-      else if (val < 225) val = 325; //325      
-      //ledcWrite(8,10*val);
-    }     
-    else if(!strcmp(variable, "car")) 
-    {  
-      if (val==1) 
-      {
-        Serial.println("Forward");
-        actstate = fwd;
-        WheelAct(speed, speed, HIGH, LOW, HIGH, LOW);
-        //httpd_resp_set_type(req, "text/html");
-        //return httpd_resp_send(req, "OK", 2);
-      }
-      else if (val==2) 
-      {   
-        Serial.println("TurnRight");
-        WheelAct(speed, speed, LOW, HIGH, HIGH, LOW);
-        //httpd_resp_set_type(req, "text/html");
-        //return httpd_resp_send(req, "OK", 2);
-      }
-      else if (val==3) 
-      {
-        Serial.println("Stop"); 
-        actstate = stp;       
-        WheelAct(0, 0, LOW, LOW, LOW, LOW);
-        //httpd_resp_set_type(req, "text/html");
-        //return httpd_resp_send(req, "OK", 2); 
-      }
-      else if (val==4) 
-      {
-        Serial.println("TurnLeft");
-        WheelAct(speed, speed, HIGH, LOW, LOW, HIGH);
-        //httpd_resp_set_type(req, "text/html");
-        //return httpd_resp_send(req, "OK", 2);        
-      }
-      else if (val==5) 
-      {
-        Serial.println("Backward");  
-        actstate = rev;      
-        WheelAct(speed, speed, LOW, HIGH, LOW, HIGH);
-        //httpd_resp_set_type(req, "text/html");
-        //return httpd_resp_send(req, "OK", 2);              
-      }
-    }        
-    else 
-    { 
-      Serial.println("variable");
-      res = -1; 
-    }
-
-    if(res){ return httpd_resp_send_500(req); }
-
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
-    return httpd_resp_send(req, NULL, 0);
 }
 
-static esp_err_t status_handler(httpd_req_t *req){
-    static char json_response[1024];
+static esp_err_t ws_handler(httpd_req_t *req){
+    if (req->method == HTTP_GET) {
+        return ESP_OK; // handshake done, connection now open
+    }
 
-    sensor_t * s = esp_camera_sensor_get();
-    char * p = json_response;
-    *p++ = '{';
+    httpd_ws_frame_t ws_pkt;
+    memset(&ws_pkt, 0, sizeof(ws_pkt));
+    ws_pkt.type = HTTPD_WS_TYPE_TEXT;
 
-    p+=sprintf(p, "\"framesize\":%u,", s->status.framesize);
-    p+=sprintf(p, "\"quality\":%u,", s->status.quality);
-    *p++ = '}';
-    *p++ = 0;
-    httpd_resp_set_type(req, "application/json");
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
-    return httpd_resp_send(req, json_response, strlen(json_response));
+    esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
+    if (ret != ESP_OK) return ret;
+    if (ws_pkt.len == 0 || ws_pkt.len >= 16) return ESP_OK; // ignore junk/oversized frames
+
+    uint8_t buf[16] = {0};
+    ws_pkt.payload = buf;
+    ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
+    if (ret != ESP_OK) return ret;
+
+    handle_ws_cmd((const char *)buf);
+    return ESP_OK;
 }
 
-static const char PROGMEM INDEX_HTML[] = R"rawliteral(
-<!doctype html>
-<html>
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width,initial-scale=1">
-        <title>KUONGSHUN ESP32CAM ROBOT</title>
-        <style>
-            *{
-                padding: 0; margin: 0;
-                font-family:monospace;
-            }
-
-            *{  
-                -webkit-touch-callout:none;  
-                -webkit-user-select:none;  
-                -khtml-user-select:none;  
-                -moz-user-select:none;  
-                -ms-user-select:none;  
-                user-select:none;  
-            }
-
-        canvas {
-        margin: auto;
-        display: block;
-
-        }
-        .tITULO{
-            text-align: center;
-            color: rgb(97, 97, 97);
-            
-        }
-        .LINK{
-            color: red;
-            width: 60px;
-            margin: auto;
-            display: block;
-            font-size: 14px;
-        }
-        .cont_stream{
-            width: 90%;
-            max-width: 700px;///////////////
-
-            border: 1px solid red;
-            margin: auto;
-            display:block;
-        }
-        .cont_flex_Screen{
-            margin: 20px auto 20px;
-            width: 70%;
-            max-width: 400px;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-around;
-            
-        }
-        .cont_flex_Screen button{
-            width: 70px;
-            height: 30px;
-            border: none;
-            background-color: red;
-            border-radius: 10px;
-            color: white;
-
-        }
-        .cont_flex_Screen button:active{
-            background-color: green;
-        }
-        .cont_flex{
-            margin: 20px auto 20px;
-            width: 90%;
-            max-width: 400px;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-around;
-        }
-        .cont_flex button{
-            width: 70px;
-            height: 30px;
-            border: none;
-            background-color: red;
-            border-radius: 10px;
-            color: white;
-
-        }
-        .cont_flex button:active{
-            background-color: green;
-        }
-
-        input{-webkit-user-select:auto;} 
-        input[type=range]{-webkit-appearance:none;width:300px;height:25px;background:#cecece;cursor:pointer;margin:0}
-        input[type=range]:focus{outline:0}
-        input[type=range]::-webkit-slider-runnable-track{width:100%;height:2px;cursor:pointer;background:#EFEFEF;border-radius:0;border:0 solid #EFEFEF}
-        input[type=range]::-webkit-slider-thumb{border:1px solid rgba(0,0,30,0);height:22px;width:22px;border-radius:50px;background:#ff3034;cursor:pointer;-webkit-appearance:none;margin-top:-10px}
-
-        </style>
-    </head>
-    <body>
-         
-        <!--  <canvas id="canvas" width="200" height="90"></canvas>  -->
-        <h1 class="tITULO">KUONGSHUN ESP32CAM ROBOT</h1>
-        <!--  <a href="https://www.youtube.com" class="LINK">YOUTUBE</a>  -->
-    
-        <img id="stream" class="cont_stream">
-
-        <div class="cont_flex_Screen">     
-            <button type="button" id="toggle-stream">Start Screen</button>
-            <button type="button" id="get-still">Pause Screen</button>
-            <button type="button" id="close-stream">Close Screen</button>
-        </div>
-
-        <!--
-        <div class="cont_flex"><div><input type="checkbox" style="margin-right: 5px;" id="nostop" onclick="var noStop=0;if (this.checked) noStop=1;fetch(document.location.origin+'/control?var=nostop&val='+noStop);">No Stop</div></div>
-        -->
-        
-        <div class="cont_flex">
-            <button type="button" id="forward">Forward</button>
-        </div>
-
-        <div class="cont_flex">
-            <button type="button" id="turnleft">TurnLeft</button>
-            <button type="button" id="turnright">TurnRight</button>
-        </div>
-
-        <div class="cont_flex">
-            <button type="button" id="backward">Backward</button>
-        </div>
-
-        <!--
-        <div class="cont_flex">  
-            <div style="display: flex;align-items: center;">Servo <input type="range" id="servo" min="325" max="650" value="487" onchange="try{fetch(document.location.origin+'/control?var=servo&val='+this.value);}catch(e){}"></div>
-        </div>
-        -->
-        <div class="cont_flex">  
-            <div style="display: flex;align-items: center;">Speed <input type="range" id="speed" min="150" max="255" value="220" onchange="try{fetch(document.location.origin+'/control?var=speed&val='+this.value);}catch(e){}"></div>
-        </div>
-        <div class="cont_flex">  
-            <div style="display: flex;align-items: center;">L E D<input type="range" id="flash" min="0" max="255" value="0" onchange="try{fetch(document.location.origin+'/control?var=flash&val='+this.value);}catch(e){}"></div>
-        </div>
-        <!--
-        <div class="cont_flex">  
-            <div style="display: flex;align-items: center;">Qual. <input type="range" id="quality" min="10" max="63" value="10" onchange="try{fetch(document.location.origin+'/control?var=quality&val='+this.value);}catch(e){}"></div>
-        </div>
-        <div class="cont_flex">  
-            <div style="display: flex;align-items: center;">Frame <input type="range" id="framesize" min="0" max="5" value="5" onchange="try{fetch(document.location.origin+'/control?var=framesize&val='+this.value);}catch(e){}"></div>
-        </div>
-        -->
-
-        <script>
-            var baseHost = document.location.origin;
-
-            function sendCmd(varName, val){
-                fetch(`${baseHost}/control?var=${varName}&val=${val}`).catch(function(){});
-            }
-
-            // ---- Camera stream ----
-            var stream    = document.getElementById('stream');
-            var toggleBtn = document.getElementById('toggle-stream');
-            var stillBtn  = document.getElementById('get-still');
-            var closeBtn  = document.getElementById('close-stream');
-
-            function startStream(){
-                stream.src = `${baseHost}:81/stream`;
-                toggleBtn.innerHTML = 'Stop Screen';
-            }
-            function stopStream(){
-                window.stop();
-                toggleBtn.innerHTML = 'Start Screen';
-            }
-            toggleBtn.onclick = function(){
-                if (toggleBtn.innerHTML === 'Stop Screen') stopStream();
-                else startStream();
-            };
-            stillBtn.onclick = function(){
-                stopStream();
-                stream.src = `${baseHost}/capture?_cb=${Date.now()}`;
-            };
-            closeBtn.onclick = function(){
-                stopStream();
-                stream.removeAttribute('src');
-            };
-
-            // ---- Movement: hold to move, release to stop ----
-            // car vals -> 1:forward 2:right 3:stop 4:left 5:backward
-            function bindHold(id, val){
-                var el = document.getElementById(id);
-                if(!el) return;
-                var press   = function(ev){ ev.preventDefault(); sendCmd('car', val); };
-                var release = function(ev){ ev.preventDefault(); sendCmd('car', 3);   };
-                el.addEventListener('pointerdown', press);
-                el.addEventListener('pointerup', release);
-                el.addEventListener('pointerleave', release);
-                el.addEventListener('pointercancel', release);
-            }
-            bindHold('forward',   1);
-            bindHold('turnright', 2);
-            bindHold('turnleft',  4);
-            bindHold('backward',  5);
-        </script>
-    </body>
-</html>
-)rawliteral";
-
-static esp_err_t index_handler(httpd_req_t *req){
-    httpd_resp_set_type(req, "text/html");
-
-    const char *html = (const char *)INDEX_HTML;
-    size_t html_len = strlen(html);
-    size_t sent = 0;
+// ---- Static assets: minified + gzipped at build time (see scripts/build_web.py) ----
+static esp_err_t send_gz_chunked(httpd_req_t *req, const uint8_t *data, size_t len){
     const size_t chunk_size = 1024;
-
-    while (sent < html_len) {
-        size_t len = (html_len - sent) < chunk_size ? (html_len - sent) : chunk_size;
-        if (httpd_resp_send_chunk(req, html + sent, len) != ESP_OK) {
+    size_t sent = 0;
+    while (sent < len) {
+        size_t n = (len - sent) < chunk_size ? (len - sent) : chunk_size;
+        if (httpd_resp_send_chunk(req, (const char *)(data + sent), n) != ESP_OK) {
             httpd_resp_send_chunk(req, NULL, 0);
             return ESP_FAIL;
         }
-        sent += len;
+        sent += n;
     }
     return httpd_resp_send_chunk(req, NULL, 0);
+}
+
+static esp_err_t index_handler(httpd_req_t *req){
+    httpd_resp_set_type(req, "text/html");
+    httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
+    return send_gz_chunked(req, INDEX_HTML_GZ, INDEX_HTML_GZ_LEN);
+}
+
+static esp_err_t js_handler(httpd_req_t *req){
+    httpd_resp_set_type(req, "application/javascript");
+    httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
+    return send_gz_chunked(req, APP_JS_GZ, APP_JS_GZ_LEN);
 }
 
 void startCameraServer()
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    config.max_open_sockets = 2; // only one client (phone) expected at a time; frees RAM for the parser
+    config.max_open_sockets = 3; // persistent /ws + one transient http request at a time
 
     httpd_uri_t index_uri = {
         .uri       = "/",
@@ -563,18 +266,19 @@ void startCameraServer()
         .user_ctx  = NULL
     };
 
-    httpd_uri_t status_uri = {
-        .uri       = "/status",
+    httpd_uri_t js_uri = {
+        .uri       = "/app.js",
         .method    = HTTP_GET,
-        .handler   = status_handler,
+        .handler   = js_handler,
         .user_ctx  = NULL
     };
 
-    httpd_uri_t cmd_uri = {
-        .uri       = "/control",
-        .method    = HTTP_GET,
-        .handler   = cmd_handler,
-        .user_ctx  = NULL
+    httpd_uri_t ws_uri = {
+        .uri        = "/ws",
+        .method     = HTTP_GET,
+        .handler    = ws_handler,
+        .user_ctx   = NULL,
+        .is_websocket = true
     };
 
     httpd_uri_t capture_uri = {
@@ -584,23 +288,24 @@ void startCameraServer()
         .user_ctx  = NULL
     };
 
-   httpd_uri_t stream_uri = {
+    httpd_uri_t stream_uri = {
         .uri       = "/stream",
         .method    = HTTP_GET,
         .handler   = stream_handler,
         .user_ctx  = NULL
     };
-    
+
     Serial.printf("Starting web server on port: '%d'\n", config.server_port);
     if (httpd_start(&camera_httpd, &config) == ESP_OK) {
         httpd_register_uri_handler(camera_httpd, &index_uri);
-        httpd_register_uri_handler(camera_httpd, &cmd_uri);
-        httpd_register_uri_handler(camera_httpd, &status_uri);
+        httpd_register_uri_handler(camera_httpd, &js_uri);
+        httpd_register_uri_handler(camera_httpd, &ws_uri);
         httpd_register_uri_handler(camera_httpd, &capture_uri);
     }
 
     config.server_port += 1;
     config.ctrl_port += 1;
+    config.max_open_sockets = 2; // single MJPEG viewer at a time
     Serial.printf("Starting stream server on port: '%d'\n", config.server_port);
     if (httpd_start(&stream_httpd, &config) == ESP_OK) {
         httpd_register_uri_handler(stream_httpd, &stream_uri);
