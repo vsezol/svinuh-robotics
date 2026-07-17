@@ -87,7 +87,7 @@ void CameraWebServer_init()
   s->set_framesize(s, FRAMESIZE_QVGA); //字节长度采样值:10000                #4 (画质低)  320x240
 
   s->set_vflip(s, 1);   //图片方向设置（上下）
-  s->set_hmirror(s, 1); //图片方向设置（左右）
+  s->set_hmirror(s, 0); //图片方向设置（左右） - mirrored view made left/right look swapped vs actual turns
 
   // WiFi.setTxPower(WIFI_POWER_19_5dBm);
   WiFi.setTxPower(WIFI_POWER_11dBm);
