@@ -7,3 +7,6 @@ generated/
 __pycache__/
 secrets.h
 .env
+*.pt
+.venv/
+recordings/
